@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as Device from "expo-device";
 import { Button } from "./Button";
 
 type Props = {
@@ -8,16 +9,46 @@ type Props = {
   busy?: boolean;
 };
 
+const SIMULATOR_PHOTO_URI =
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=640&h=480&fit=crop";
+
 export function CameraPreview({ onCapture, busy }: Props) {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [ready, setReady] = useState(false);
+  const isSimulator = !Device.isDevice;
 
   useEffect(() => {
+    if (isSimulator) {
+      setReady(true);
+      return;
+    }
     if (permission && !permission.granted && permission.canAskAgain) {
       void requestPermission();
     }
-  }, [permission, requestPermission]);
+  }, [isSimulator, permission, requestPermission]);
+
+  if (isSimulator) {
+    return (
+      <View className="gap-3">
+        <View className="aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl bg-[#1a1a1a] px-6">
+          <View className="mb-4 h-28 w-28 rounded-full border-2 border-dashed border-white/40" />
+          <Text className="text-center text-sm font-semibold text-white">
+            Camera unavailable in simulator
+          </Text>
+          <Text className="mt-1.5 text-center text-xs leading-5 text-white/70">
+            iOS Simulator has no camera hardware. Use a physical device for a
+            live preview, or simulate capture below.
+          </Text>
+        </View>
+        <Button
+          label={busy ? "Verifying…" : "Simulate capture and verify"}
+          disabled={!ready || busy}
+          onPress={() => onCapture(SIMULATOR_PHOTO_URI)}
+        />
+      </View>
+    );
+  }
 
   if (!permission) {
     return (

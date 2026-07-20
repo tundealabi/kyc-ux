@@ -15,7 +15,6 @@ function reference(prefix: string): string {
 /** Stub: replace with Smile ID / Dojah / VerifyMe later */
 export async function verifyFace(_photo: Blob | string): Promise<VerifyResult> {
   await delay();
-  // Simulate occasional failure for retry UX in demos
   if (Math.random() < 0.15) {
     return {
       ok: false,
@@ -53,7 +52,6 @@ export async function verifyNin(input: {
       message: "NIN could not be verified",
     };
   }
-  // Stub: always "matches" BVN when both are 11 digits
   return { ok: true, reference: reference("nin") };
 }
 
@@ -118,6 +116,56 @@ export type CorporateDraft = {
 
 export type KycDraft = PersonalDraft | CorporateDraft;
 
+export type DraftStorage = {
+  getItem(key: string): string | null | Promise<string | null>;
+  setItem(key: string, value: string): void | Promise<void>;
+  removeItem(key: string): void | Promise<void>;
+};
+
+const memoryFallback = new Map<string, string>();
+
+const defaultStorage: DraftStorage = {
+  getItem(key) {
+    try {
+      if (typeof localStorage !== "undefined") {
+        return localStorage.getItem(key);
+      }
+    } catch {
+      // ignore
+    }
+    return memoryFallback.get(key) ?? null;
+  },
+  setItem(key, value) {
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(key, value);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+    memoryFallback.set(key, value);
+  },
+  removeItem(key) {
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(key);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+    memoryFallback.delete(key);
+  },
+};
+
+let storage: DraftStorage = defaultStorage;
+
+/** Call once at app startup (e.g. AsyncStorage on React Native). */
+export function configureDraftStorage(next: DraftStorage): void {
+  storage = next;
+}
+
 const PERSONAL_KEY = "kyc-draft-personal";
 const CORPORATE_KEY = "kyc-draft-corporate";
 const ACTIVE_KEY = "kyc-active-kind";
@@ -126,9 +174,9 @@ function draftKey(kind: DraftKind): string {
   return kind === "personal" ? PERSONAL_KEY : CORPORATE_KEY;
 }
 
-function readJson<T>(key: string): T | null {
+async function readJson<T>(key: string): Promise<T | null> {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = await storage.getItem(key);
     if (!raw) return null;
     return JSON.parse(raw) as T;
   } catch {
@@ -136,23 +184,22 @@ function readJson<T>(key: string): T | null {
   }
 }
 
-function writeJson(key: string, value: unknown): void {
+async function writeJson(key: string, value: unknown): Promise<void> {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    await storage.setItem(key, JSON.stringify(value));
   } catch {
     // Private mode / quota — ignore
   }
 }
 
-function removeKey(key: string): void {
+async function removeKey(key: string): Promise<void> {
   try {
-    localStorage.removeItem(key);
+    await storage.removeItem(key);
   } catch {
     // ignore
   }
 }
 
-/** In-memory cache + localStorage so drafts survive refresh */
 const draftStore = new Map<string, KycDraft>();
 
 export async function saveDraft(
@@ -162,13 +209,13 @@ export async function saveDraft(
   await delay(50);
   const copy = structuredClone(draft);
   draftStore.set(draft.kind, copy);
-  writeJson(draftKey(draft.kind), copy);
-  writeJson(ACTIVE_KEY, draft.kind);
+  await writeJson(draftKey(draft.kind), copy);
+  await writeJson(ACTIVE_KEY, draft.kind);
 }
 
 export async function loadDraft(_sessionId: string): Promise<KycDraft | null> {
   await delay(50);
-  const active = readJson<DraftKind>(ACTIVE_KEY);
+  const active = await readJson<DraftKind>(ACTIVE_KEY);
   if (!active) return null;
   if (active === "personal") return loadDraftByKind("personal");
   return loadDraftByKind("corporate");
@@ -186,7 +233,7 @@ export async function loadDraftByKind(
   const cached = draftStore.get(kind);
   if (cached && cached.kind === kind) return structuredClone(cached);
 
-  const stored = readJson<KycDraft>(draftKey(kind));
+  const stored = await readJson<KycDraft>(draftKey(kind));
   if (!stored || stored.kind !== kind) return null;
 
   draftStore.set(kind, stored);
@@ -197,14 +244,14 @@ export async function clearDraft(
   _sessionId: string,
   kind?: DraftKind,
 ): Promise<void> {
-  const active = kind ?? readJson<DraftKind>(ACTIVE_KEY);
+  const active = kind ?? (await readJson<DraftKind>(ACTIVE_KEY));
   if (!active) return;
 
   draftStore.delete(active);
-  removeKey(draftKey(active));
+  await removeKey(draftKey(active));
 
-  const remainingActive = readJson<DraftKind>(ACTIVE_KEY);
+  const remainingActive = await readJson<DraftKind>(ACTIVE_KEY);
   if (remainingActive === active) {
-    removeKey(ACTIVE_KEY);
+    await removeKey(ACTIVE_KEY);
   }
 }

@@ -16,6 +16,8 @@ import { Field } from "../components/Field";
 import { Button } from "../components/Button";
 import { ContextualHelp } from "../components/ContextualHelp";
 import { CameraPreview } from "../components/CameraPreview";
+import { ProgressSummary } from "../components/ProgressSummary";
+import { useToast } from "../components/Toast";
 import { useKyc } from "../state/KycContext";
 import {
   PERSONAL_STEPS,
@@ -134,15 +136,23 @@ export function PersonalFlow() {
 
   if (step === "face") return <FaceStep shell={shell} />;
 
+  return <PersonalDoneStep onDone={() => void reset()} />;
+}
+
+function PersonalDoneStep({ onDone }: { onDone: () => void }) {
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    showToast("Personal verification completed successfully.");
+  }, [showToast]);
+
   return (
     <FlowLayout
       title="Identity verified"
-      subtitle="Your personal verification is complete."
-      footer={<Button label="Done" onPress={() => void reset()} />}
+      subtitle="Review your submitted details below, then continue to your account."
+      footer={<Button label="Done" onPress={onDone} />}
     >
-      <Text className="text-[15px] leading-5 text-muted">
-        BVN, NIN, address, and face verification were submitted successfully.
-      </Text>
+      <ProgressSummary title="Verification summary" embedded editable />
     </FlowLayout>
   );
 }

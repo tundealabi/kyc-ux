@@ -37,6 +37,8 @@ async function getSessionId(): Promise<string> {
   return id;
 }
 
+type SummaryLine = { label: string; value: string; step: string };
+
 type KycContextValue = {
   sessionId: string;
   draft: KycDraft | null;
@@ -46,9 +48,15 @@ type KycContextValue = {
   updatePersonal: (patch: Partial<PersonalDraft>) => Promise<void>;
   updateCorporate: (patch: Partial<CorporateDraft>) => Promise<void>;
   reset: () => Promise<void>;
+  summary: { accountLabel: string; lines: SummaryLine[] };
 };
 
 const KycContext = createContext<KycContextValue | null>(null);
+
+function maskId(value?: string): string {
+  if (!value || value.length < 4) return "—";
+  return `${"•".repeat(Math.max(0, value.length - 4))}${value.slice(-4)}`;
+}
 
 export function KycProvider({ children }: { children: ReactNode }) {
   const [sessionId, setSessionId] = useState("");
@@ -122,6 +130,62 @@ export function KycProvider({ children }: { children: ReactNode }) {
     setDraft(null);
   }, [draft?.kind, sessionId]);
 
+  const summary = useMemo(() => {
+    if (!draft) {
+      return { accountLabel: "Not started", lines: [] as SummaryLine[] };
+    }
+
+    if (draft.kind === "personal") {
+      const lines: SummaryLine[] = [];
+      if (draft.bvn)
+        lines.push({ label: "BVN", value: maskId(draft.bvn), step: "bvn" });
+      if (draft.dateOfBirth)
+        lines.push({
+          label: "Date of birth",
+          value: draft.dateOfBirth,
+          step: "bvn",
+        });
+      if (draft.nin)
+        lines.push({ label: "NIN", value: maskId(draft.nin), step: "nin" });
+      if (draft.address) {
+        lines.push({
+          label: "Address",
+          value: `${draft.address.street}, ${draft.address.city}`,
+          step: "address",
+        });
+      }
+      if (draft.faceVerified)
+        lines.push({ label: "Face", value: "Verified", step: "face-prime" });
+      return { accountLabel: "Personal account", lines };
+    }
+
+    const lines: SummaryLine[] = [];
+    if (draft.cacNumber) {
+      const prefix = draft.registrationType === "business_name" ? "BN" : "RC";
+      lines.push({
+        label: "CAC",
+        value: `${prefix} ${draft.cacNumber}`,
+        step: "cac",
+      });
+    }
+    if (draft.bvn)
+      lines.push({
+        label: "Principal BVN",
+        value: maskId(draft.bvn),
+        step: "principal-bvn",
+      });
+    if (draft.address) {
+      lines.push({
+        label: "Business address",
+        value: `${draft.address.street}, ${draft.address.city}`,
+        step: "address",
+      });
+    }
+    if (draft.faceVerified)
+      lines.push({ label: "Face", value: "Verified", step: "face-prime" });
+    return { accountLabel: "Corporate account", lines };
+  }, [draft]);
+
   const value = useMemo(
     () => ({
       sessionId,
@@ -132,6 +196,7 @@ export function KycProvider({ children }: { children: ReactNode }) {
       updatePersonal,
       updateCorporate,
       reset,
+      summary,
     }),
     [
       sessionId,
@@ -142,6 +207,7 @@ export function KycProvider({ children }: { children: ReactNode }) {
       updatePersonal,
       updateCorporate,
       reset,
+      summary,
     ],
   );
 

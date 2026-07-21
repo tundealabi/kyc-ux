@@ -18,6 +18,8 @@ import { Field } from "../components/Field";
 import { Button } from "../components/Button";
 import { ContextualHelp } from "../components/ContextualHelp";
 import { CameraPreview } from "../components/CameraPreview";
+import { ProgressSummary } from "../components/ProgressSummary";
+import { useToast } from "../components/Toast";
 import { useKyc } from "../state/KycContext";
 import {
   CORPORATE_STEPS,
@@ -133,16 +135,23 @@ export function CorporateFlow() {
 
   if (step === "face") return <FaceStep shell={shell} />;
 
+  return <CorporateDoneStep onDone={() => void reset()} />;
+}
+
+function CorporateDoneStep({ onDone }: { onDone: () => void }) {
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    showToast("Business verification completed successfully.");
+  }, [showToast]);
+
   return (
     <FlowLayout
       title="Business verified"
-      subtitle="Your corporate verification is complete."
-      footer={<Button label="Done" onPress={() => void reset()} />}
+      subtitle="Review your submitted details below, then continue."
+      footer={<Button label="Done" onPress={onDone} />}
     >
-      <Text className="text-[15px] leading-5 text-muted">
-        CAC, principal BVN, address, and face verification were submitted
-        successfully.
-      </Text>
+      <ProgressSummary title="Verification summary" embedded editable />
     </FlowLayout>
   );
 }

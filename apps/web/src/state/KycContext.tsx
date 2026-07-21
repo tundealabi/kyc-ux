@@ -40,7 +40,7 @@ type KycContextValue = {
   reset: () => Promise<void>;
   summary: {
     accountLabel: string;
-    lines: { label: string; value: string }[];
+    lines: { label: string; value: string; step: string }[];
   };
 };
 
@@ -136,38 +136,53 @@ export function KycProvider({ children }: { children: ReactNode }) {
     }
 
     if (draft.kind === "personal") {
-      const lines: { label: string; value: string }[] = [];
-      if (draft.bvn) lines.push({ label: "BVN", value: maskId(draft.bvn) });
+      const lines: { label: string; value: string; step: string }[] = [];
+      if (draft.bvn)
+        lines.push({ label: "BVN", value: maskId(draft.bvn), step: "bvn" });
       if (draft.dateOfBirth)
-        lines.push({ label: "Date of birth", value: draft.dateOfBirth });
-      if (draft.nin) lines.push({ label: "NIN", value: maskId(draft.nin) });
+        lines.push({
+          label: "Date of birth",
+          value: draft.dateOfBirth,
+          step: "bvn",
+        });
+      if (draft.nin)
+        lines.push({ label: "NIN", value: maskId(draft.nin), step: "nin" });
       if (draft.address) {
         lines.push({
           label: "Address",
           value: `${draft.address.street}, ${draft.address.city}`,
+          step: "address",
         });
       }
-      if (draft.faceVerified) lines.push({ label: "Face", value: "Verified" });
+      if (draft.faceVerified)
+        lines.push({ label: "Face", value: "Verified", step: "face-prime" });
       return { accountLabel: "Personal account", lines };
     }
 
-    const lines: { label: string; value: string }[] = [];
+    const lines: { label: string; value: string; step: string }[] = [];
     if (draft.cacNumber) {
       const prefix = draft.registrationType === "business_name" ? "BN" : "RC";
       lines.push({
         label: "CAC",
         value: `${prefix} ${draft.cacNumber}`,
+        step: "cac",
       });
     }
     if (draft.bvn)
-      lines.push({ label: "Principal BVN", value: maskId(draft.bvn) });
+      lines.push({
+        label: "Principal BVN",
+        value: maskId(draft.bvn),
+        step: "principal-bvn",
+      });
     if (draft.address) {
       lines.push({
         label: "Business address",
         value: `${draft.address.street}, ${draft.address.city}`,
+        step: "address",
       });
     }
-    if (draft.faceVerified) lines.push({ label: "Face", value: "Verified" });
+    if (draft.faceVerified)
+      lines.push({ label: "Face", value: "Verified", step: "face-prime" });
     return { accountLabel: "Corporate account", lines };
   }, [draft]);
 

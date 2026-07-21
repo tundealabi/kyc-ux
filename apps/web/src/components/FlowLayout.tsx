@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ProgressBar } from "./ProgressBar";
+import { ProgressSummary } from "./ProgressSummary";
 import type { FlowStep } from "../flow/steps";
-import { useKyc } from "../state/KycContext";
 
 type Props = {
   title: string;
@@ -25,10 +25,8 @@ export function FlowLayout({
   onSelectStep,
   children,
   footer,
-  showSummary = true,
+  showSummary = false,
 }: Props) {
-  const { summary } = useKyc();
-
   return (
     <div className="mx-auto w-[min(100%-2rem,1080px)] py-5 pb-12">
       <header className="mb-5">
@@ -69,33 +67,8 @@ export function FlowLayout({
         </main>
 
         {showSummary ? (
-          <aside
-            className="sticky top-4 rounded-[18px] border border-border/80 bg-surface p-5 shadow-panel max-[860px]:static max-[860px]:order-first"
-            aria-label="Progress summary"
-          >
-            <h2 className="mb-1.5 text-base">Your progress</h2>
-            <p className="mb-4 text-sm text-muted">{summary.accountLabel}</p>
-            {summary.lines.length === 0 ? (
-              <p className="m-0 text-sm leading-snug text-muted">
-                Details you enter will appear here as you go.
-              </p>
-            ) : (
-              <dl className="m-0 grid gap-3">
-                {summary.lines.map((line) => (
-                  <div
-                    key={line.label}
-                    className="grid gap-0.5 border-b border-border pb-3 last:border-b-0 last:pb-0"
-                  >
-                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
-                      {line.label}
-                    </dt>
-                    <dd className="m-0 break-words text-[0.95rem]">
-                      {line.value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            )}
+          <aside className="sticky top-4 max-[860px]:static max-[860px]:order-first">
+            <ProgressSummary />
           </aside>
         ) : null}
       </div>

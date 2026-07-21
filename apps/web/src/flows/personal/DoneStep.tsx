@@ -1,20 +1,26 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FlowLayout } from "../../components/FlowLayout";
+import { ProgressSummary } from "../../components/ProgressSummary";
 import { Button } from "../../components/Button";
+import { useToast } from "../../components/Toast";
 import { useKyc } from "../../state/KycContext";
 
 export function PersonalDoneStep() {
   const navigate = useNavigate();
   const { reset } = useKyc();
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    showToast("Personal verification completed successfully.");
+  }, [showToast]);
 
   return (
     <FlowLayout
       title="Identity verified"
-      subtitle="Your personal verification is complete. You can continue to your account."
+      subtitle="Review your submitted details below, then continue to your account."
     >
-      <p className="m-0 leading-snug text-muted">
-        BVN, NIN, address, and face verification were submitted successfully.
-      </p>
+      <ProgressSummary title="Verification summary" embedded editable />
       <Button
         fullWidth
         onClick={async () => {

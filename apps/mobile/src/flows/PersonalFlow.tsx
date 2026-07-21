@@ -10,6 +10,7 @@ import {
   type AddressInput,
 } from "@kyc/validation";
 import { verifyBvn, verifyNin, verifyFace, saveAddress } from "@kyc/api-client";
+import { useRouter } from "expo-router";
 import { FlowLayout } from "../components/FlowLayout";
 import { OverviewSteps } from "../components/OverviewSteps";
 import { Field } from "../components/Field";
@@ -17,7 +18,7 @@ import { Button } from "../components/Button";
 import { ContextualHelp } from "../components/ContextualHelp";
 import { CameraPreview } from "../components/CameraPreview";
 import { ProgressSummary } from "../components/ProgressSummary";
-import { useToast } from "../components/Toast";
+import { SuccessModal } from "../components/SuccessModal";
 import { useKyc } from "../state/KycContext";
 import {
   PERSONAL_STEPS,
@@ -52,7 +53,7 @@ function toIsoDate(d: Date) {
 }
 
 export function PersonalFlow() {
-  const { draft, ready, startPersonal, updatePersonal, reset } = useKyc();
+  const { draft, ready, startPersonal, updatePersonal } = useKyc();
 
   useEffect(() => {
     if (!ready) return;
@@ -136,23 +137,30 @@ export function PersonalFlow() {
 
   if (step === "face") return <FaceStep shell={shell} />;
 
-  return <PersonalDoneStep onDone={() => void reset()} />;
+  return <PersonalDoneStep />;
 }
 
-function PersonalDoneStep({ onDone }: { onDone: () => void }) {
-  const { showToast } = useToast();
-
-  useEffect(() => {
-    showToast("Personal verification completed successfully.");
-  }, [showToast]);
+function PersonalDoneStep() {
+  const router = useRouter();
+  const { reset } = useKyc();
+  const [successOpen, setSuccessOpen] = useState(false);
 
   return (
     <FlowLayout
       title="Identity verified"
       subtitle="Review your submitted details below, then continue to your account."
-      footer={<Button label="Done" onPress={onDone} />}
+      footer={<Button label="Done" onPress={() => setSuccessOpen(true)} />}
     >
       <ProgressSummary title="Verification summary" embedded editable />
+      <SuccessModal
+        open={successOpen}
+        title="Verification complete"
+        message="Your personal verification was submitted successfully."
+        onConfirm={async () => {
+          await reset();
+          router.replace("/");
+        }}
+      />
     </FlowLayout>
   );
 }

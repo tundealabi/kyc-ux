@@ -1,19 +1,15 @@
-import { useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FlowLayout } from "../../components/FlowLayout";
 import { ProgressSummary } from "../../components/ProgressSummary";
 import { Button } from "../../components/Button";
-import { useToast } from "../../components/Toast";
+import { SuccessModal } from "../../components/SuccessModal";
 import { useKyc } from "../../state/KycContext";
 
 export function CorporateDoneStep() {
   const navigate = useNavigate();
   const { reset } = useKyc();
-  const { showToast } = useToast();
-
-  useEffect(() => {
-    showToast("Business verification completed successfully.");
-  }, [showToast]);
+  const [successOpen, setSuccessOpen] = useState(false);
 
   return (
     <FlowLayout
@@ -21,15 +17,18 @@ export function CorporateDoneStep() {
       subtitle="Review your submitted details below, then continue."
     >
       <ProgressSummary title="Verification summary" embedded editable />
-      <Button
-        fullWidth
-        onClick={async () => {
+      <Button fullWidth onClick={() => setSuccessOpen(true)}>
+        Done
+      </Button>
+      <SuccessModal
+        open={successOpen}
+        title="Verification complete"
+        message="Your business verification was submitted successfully."
+        onConfirm={async () => {
           await reset();
           navigate("/");
         }}
-      >
-        Done
-      </Button>
+      />
     </FlowLayout>
   );
 }

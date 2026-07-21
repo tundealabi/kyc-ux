@@ -12,6 +12,7 @@ import {
   type CacRegistrationType,
 } from "@kyc/validation";
 import { verifyBvn, verifyCac, verifyFace, saveAddress } from "@kyc/api-client";
+import { useRouter } from "expo-router";
 import { FlowLayout } from "../components/FlowLayout";
 import { OverviewSteps } from "../components/OverviewSteps";
 import { Field } from "../components/Field";
@@ -19,7 +20,7 @@ import { Button } from "../components/Button";
 import { ContextualHelp } from "../components/ContextualHelp";
 import { CameraPreview } from "../components/CameraPreview";
 import { ProgressSummary } from "../components/ProgressSummary";
-import { useToast } from "../components/Toast";
+import { SuccessModal } from "../components/SuccessModal";
 import { useKyc } from "../state/KycContext";
 import {
   CORPORATE_STEPS,
@@ -53,7 +54,7 @@ function toIsoDate(d: Date) {
 }
 
 export function CorporateFlow() {
-  const { draft, ready, startCorporate, updateCorporate, reset } = useKyc();
+  const { draft, ready, startCorporate, updateCorporate } = useKyc();
 
   useEffect(() => {
     if (!ready) return;
@@ -135,23 +136,30 @@ export function CorporateFlow() {
 
   if (step === "face") return <FaceStep shell={shell} />;
 
-  return <CorporateDoneStep onDone={() => void reset()} />;
+  return <CorporateDoneStep />;
 }
 
-function CorporateDoneStep({ onDone }: { onDone: () => void }) {
-  const { showToast } = useToast();
-
-  useEffect(() => {
-    showToast("Business verification completed successfully.");
-  }, [showToast]);
+function CorporateDoneStep() {
+  const router = useRouter();
+  const { reset } = useKyc();
+  const [successOpen, setSuccessOpen] = useState(false);
 
   return (
     <FlowLayout
       title="Business verified"
       subtitle="Review your submitted details below, then continue."
-      footer={<Button label="Done" onPress={onDone} />}
+      footer={<Button label="Done" onPress={() => setSuccessOpen(true)} />}
     >
       <ProgressSummary title="Verification summary" embedded editable />
+      <SuccessModal
+        open={successOpen}
+        title="Verification complete"
+        message="Your business verification was submitted successfully."
+        onConfirm={async () => {
+          await reset();
+          router.replace("/");
+        }}
+      />
     </FlowLayout>
   );
 }
